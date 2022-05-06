@@ -3,7 +3,7 @@ import sqlite3
 
 class DataBase:
     def __init__(self, path):
-        self.con = sqlite3.connect(path)
+        self.con = sqlite3.connect(path, check_same_thread=False)  # без check_same_thread не работает
         self.cur = self.con.cursor()
 
     def select_with_fetchone(self, cmd):

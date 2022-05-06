@@ -2,6 +2,7 @@ import telebot
 import logging
 from telebot import types
 import database
+import re
 
 
 logging.basicConfig(
@@ -13,9 +14,9 @@ bot = telebot.TeleBot(token)
 
 db = database.DataBase('data/timetable_database')
 
-adding_timetable = [False]
-current_timetable = [[]]
-current_user = ['']
+
+params = {'adding_timetable': False, 'current_timetable': [], 'current_user': '', 'current_day': []}
+week_days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
 
 
 @bot.message_handler(commands=['start'])
@@ -67,42 +68,79 @@ def help_message(message):
 
 @bot.message_handler(commands=['add_timetable'])
 def add_timetable(message):
-    adding_timetable[0] = True
-    current_user[0] = message.from_user.id
+    params['adding_timetable'] = True
+    params['current_day'] = []
+    params['current_timetable'] = []
+    params['current_user'] = message.from_user.id
+
     markup = types.ReplyKeyboardMarkup(one_time_keyboard=False, resize_keyboard=True)
     markup.row('/cancel', '/save', '/next')
-    bot.send_message(message.from_user.id, text='Нажмите "cancel" для отмены ввода, '
+    bot.send_message(message.from_user.id, text='Формат ввода: "название", "начало", "конец"\n'
+                                                'Нажмите "cancel" для отмены ввода, '
                                                 '"save" для сохранения расписания, '
                                                 '"next" для перехода к следующему дню', reply_markup=markup)
+    bot.send_message(chat_id=message.from_user.id, text=f"Введите урок №{len(params['current_day']) + 1}")
 
 
 @bot.message_handler(commands=['cancel'])
 def cancel(message):
-    adding_timetable[0] = False
-    current_timetable[0] = []
-    current_user[0] = ''
-    bot.send_message(chat_id=message.from_user.id, text=f"Действие отменено")
+    params['adding_timetable'] = False
+    params['current_day'] = []
+    params['current_timetable'] = []
+    params['current_user'] = ''
+    bot.send_message(chat_id=message.from_user.id, text=f"Действие отменено",
+                     reply_markup=types.ReplyKeyboardRemove())
 
 
 @bot.message_handler(commands=['save'])
 def cancel(message):
-    db.query(f"""INSERT INTO lessons (lesson_name, start_time, end_time, user) VALUES ({}, {}, {}, {})""")
+    day = dict()
+    day[week_days[len(params['current_timetable'])]] = params['current_day']
+    params['current_timetable'].append(day)
+    params['current_day'] = []
 
-    if current_user[0] in db.select_with_fetchall("""SELECT user_id FROM users""")[0]:
-        pass
-    else:
-        db.query(f"""INSERT INTO users (user_id, lessons_ids) VALUES ({message.from_user.id}, {})""")
+    # db.select_with_fetchall("SELECT user_id FROM users")
 
-    bot.send_message(chat_id=message.from_user.id, text=f"Расписание сохранено")
+    bot.send_message(chat_id=message.from_user.id, text='Сохраняю, подождите 🕑')
+    print(params)
 
-    adding_timetable[0] = False
-    current_timetable[0] = []
-    current_user[0] = ''
+    # for i in range(len(params['current_timetable'])):
+    #     elem = params['current_timetable'][i]
+    #     key = elem.keys()[0]
+    #     data = elem[key]
+    #     for j in range(len(data)):
+    #         db.query(f"""INSERT INTO lessons (lesson_name, start_time, end_time, user) VALUES ({}, {}, {}, {})""")
+
+    # db.query(f"""INSERT INTO lessons (lesson_name, start_time, end_time, user) VALUES ({}, {}, {}, {})""")
+
+    # if params['current_user'] in db.select_with_fetchall("""SELECT user_id FROM users""")[0]:
+    #     pass
+    # else:
+    #     db.query(f"""INSERT INTO users (user_id, lessons_ids) VALUES ({params['current_user']}, {})""")
+
+    #
+    bot.send_message(chat_id=message.from_user.id, text="Расписание сохранено 👍")
+    #
+    # adding_timetable[0] = False
+    # current_timetable[0] = []
+    # current_user[0] = ''
+    params['adding_timetable'] = False
+    pass
 
 
 @bot.message_handler(commands=['next'])
 def next_day(message):
-    pass
+    day = dict()
+    day[week_days[len(params['current_timetable'])]] = params['current_day']
+    params['current_timetable'].append(day)
+    params['current_day'] = []
+    elem_num = len(params['current_timetable']) - 1
+    out = '\n'.join([f"{i + 1}) {params['current_timetable'][elem_num][week_days[elem_num]][i]}"
+                     for i in range(len(params['current_timetable'][len(params['current_timetable']) - 1]
+                                        [week_days[len(params['current_timetable']) - 1]]))])
+    bot.send_message(chat_id=message.from_user.id,
+                     text=f"Добавлено расписание на "
+                          f"{week_days[len(params['current_timetable']) - 1].capitalize()}: \n{out}")
 
 
 @bot.message_handler(commands=['lesson'])
@@ -136,11 +174,24 @@ def edit_timetable(message):
 
 
 @bot.message_handler(content_types=['text'])
-def adding_task(message):
-    # with open('data/subjects.txt', 'r') as subjects:
-    #     if any([subject.lower() in message.text.lower() for subject in subjects]):
-    #         bot.send_message(chat_id=message.from_user.id, text='Р«Р«Р«')
-    pass
+def getting_tasks(message):
+    if params['adding_timetable']:
+        line = message.text
+        str_type = r".*,\s.*,\s.*"
+        res = re.fullmatch(str_type, line)
+        if res is not None and line.count(',') == 2:
+            print(line)
+            params['current_day'].append(line)
+            bot.send_message(chat_id=message.from_user.id, text=f"Введите урок №{len(params['current_day']) + 1} "
+                                                                f"или нажмите одну из кнопок ниже")
+        else:
+            bot.send_message(chat_id=message.from_user.id, text="Неверный формат ввода, повторите попытку")
+    else:
+        pass
+    print(params['current_user'])
+    print(params['adding_timetable'])
+    print(params['current_day'])
+    print(params['current_timetable'])
 
 
 def main():
