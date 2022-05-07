@@ -9,14 +9,13 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-token = "5153856526:AAFHm8vI377a8wj1l9Xy2DoPT-QBJ0FuUrc"
+token = "5153856526:AAH7uuXBS4N9Yg8t0rEyU3Dv1ciMfsOmD6E"
 bot = telebot.TeleBot(token)
 
 db = database.DataBase('data/timetable_database')
 
-
 params = {'adding_timetable': False, 'current_timetable': [], 'current_user': '', 'current_day': []}
-week_days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+week_days = ['понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота', 'воскресенье']
 
 
 @bot.message_handler(commands=['start'])
@@ -88,12 +87,12 @@ def cancel(message):
     params['current_day'] = []
     params['current_timetable'] = []
     params['current_user'] = ''
-    bot.send_message(chat_id=message.from_user.id, text=f"Действие отменено",
+    bot.send_message(chat_id=message.from_user.id, text="Действие отменено",
                      reply_markup=types.ReplyKeyboardRemove())
 
 
 @bot.message_handler(commands=['save'])
-def cancel(message):
+def save(message):
     day = dict()
     day[week_days[len(params['current_timetable'])]] = params['current_day']
     params['current_timetable'].append(day)
@@ -119,7 +118,8 @@ def cancel(message):
     #     db.query(f"""INSERT INTO users (user_id, lessons_ids) VALUES ({params['current_user']}, {})""")
 
     #
-    bot.send_message(chat_id=message.from_user.id, text="Расписание сохранено 👍")
+    bot.send_message(chat_id=message.from_user.id, text="Расписание сохранено 👍",
+                     reply_markup=types.ReplyKeyboardRemove())
     #
     # adding_timetable[0] = False
     # current_timetable[0] = []
@@ -188,10 +188,10 @@ def getting_tasks(message):
             bot.send_message(chat_id=message.from_user.id, text="Неверный формат ввода, повторите попытку")
     else:
         pass
-    print(params['current_user'])
-    print(params['adding_timetable'])
-    print(params['current_day'])
-    print(params['current_timetable'])
+    # print(params['current_user'])
+    # print(params['adding_timetable'])
+    # print(params['current_day'])
+    # print(params['current_timetable'])
 
 
 def main():
