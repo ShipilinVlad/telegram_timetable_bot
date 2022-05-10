@@ -229,19 +229,22 @@ def timetable(message):
     table = db.select_with_fetchall(f"""SELECT lesson_name, start_time, end_time, day 
                                         FROM lessons 
                                         WHERE user={message.from_user.id}""")
-    out = dict()
-    out_text = ''
-    for elem in table:
-        if elem[3] not in out.keys():
-            out[elem[3]] = [f'{elem[0]}, {elem[1]}, {elem[2]}']
-        else:
-            out[elem[3]].append(f'{elem[0]}, {elem[1]}, {elem[2]}')
-    for key in out.keys():
-        out_text += f"{str(key).capitalize()}:\n"
-        for i in range(len(out[key])):
-            out_text += f"{i + 1}) {out[key][i]}\n"
-        out_text += '\n'
-    bot.send_message(chat_id=message.from_user.id, text=out_text)
+    if table:
+        out = dict()
+        out_text = ''
+        for elem in table:
+            if elem[3] not in out.keys():
+                out[elem[3]] = [f'{elem[0]}, {elem[1]}, {elem[2]}']
+            else:
+                out[elem[3]].append(f'{elem[0]}, {elem[1]}, {elem[2]}')
+        for key in out.keys():
+            out_text += f"{str(key).capitalize()}:\n"
+            for i in range(len(out[key])):
+                out_text += f"{i + 1}) {out[key][i]}\n"
+            out_text += '\n'
+        bot.send_message(chat_id=message.from_user.id, text=out_text)
+    else:
+        bot.send_message(chat_id=message.from_user.id, text="Нет сохранённого расписания")
 
 
 @bot.message_handler(content_types=['text'])
